@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>탐방계획서 작성하기</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <p class="eyebrow">정읍시청 부산 정책 골목 탐방</p>
+    <h1>탐방계획서 작성하기</h1>
+    <p>입력한 내용으로 동일한 양식의 PDF 탐방계획서가 자동 생성됩니다.</p>
+  </header>
+
+  <div id="mobileNotice" class="browser-notice" hidden>
+    <strong>PDF 저장 안내</strong>
+    <span>카카오톡 내부 브라우저에서 PDF 저장이 제한될 수 있습니다.<br>상단의 사이트 주소를 <b>'복사'</b>해서 Safari 또는 Chrome으로 접속해서 <b>'붙여넣기'</b> 후 이용해주세요.</span>
+  </div>
+
+  <form id="planForm" action="/generate" method="post">
+    <section class="card blue">
+      <div class="section-title"><span>01</span><h2>조 정보</h2></div>
+      <div class="grid two">
+        <label>조 번호 <em>*</em><input name="group_no" type="number" min="1" max="5" required></label>
+        <label>조 이름 <em>*</em>
+          <input name="group_name" maxlength="{{ limits.group_name }}" required data-count="group-name-count">
+          <small id="group-name-count" class="counter">0/{{ limits.group_name }}</small>
+        </label>
+      </div>
+      <label>조원 이름 <em>*</em><input name="members" maxlength="60" required></label>
+
+      <h3 class="subhead">역할 분담</h3>
+      <p class="hint">팀장과 예산 관리는 필수입니다. 나머지 역할은 조 상황에 맞게 작성해주세요.</p>
+      <div class="role-grid">
+        <div class="role-box"><label>팀장 <em>*</em><input name="role_leader" maxlength="8" required></label></div>
+        <div class="role-box"><label>일정 관리<input name="role_schedule" maxlength="8"></label></div>
+        <div class="role-box"><label>예산 관리 <em>*</em><input name="role_budget" maxlength="8" required></label></div>
+        <div class="role-box double"><label>사진 촬영<input name="role_photo_1" maxlength="8"></label><label><input name="role_photo_2" maxlength="8"></label></div>
+        <div class="role-box double"><label>인사이트 기록<input name="role_insight_1" maxlength="8"></label><label><input name="role_insight_2" maxlength="8"></label></div>
+        <div class="role-box double"><label>보고서 작성<input name="role_report_1" maxlength="8"></label><label><input name="role_report_2" maxlength="8"></label></div>
+      </div>
+    </section>
+
+    <section class="card green">
+      <div class="section-title"><span>02</span><h2>탐방 컨셉 <em>*</em></h2></div>
+      <p class="hint">1개 이상 선택해주세요. 여러 개를 선택할 수 있습니다.</p>
+      <div class="concepts">
+        {% for key, label in concepts.items() %}
+        <label class="concept"><input type="checkbox" name="concept" value="{{ key }}"><span>{{ label }}</span></label>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card purple">
+      <div class="section-title"><span>03</span><h2>일정표</h2></div>
+      <p class="hint">모든 방문지와 활동 계획을 작성해주세요.</p>
+      {% set rows = [('01','오전'), ('02','중식'), ('03','오후 (1)'), ('04','오후 (2)')] %}
+      {% for key, label in rows %}
+      <div class="schedule-row">
+        <strong>{{ label }}</strong>
+        <label>방문지 <em>*</em>
+          <input name="schedule_{{ key }}_place" maxlength="{{ limits.schedule_place }}" required data-count="place-{{ key }}-count">
+          <small id="place-{{ key }}-count" class="counter">0/{{ limits.schedule_place }}</small>
+        </label>
+        <label>활동 계획 <em>*</em>
+          <input name="schedule_{{ key }}_activity" maxlength="{{ limits.schedule_activity }}" required data-count="activity-{{ key }}-count">
+          <small id="activity-{{ key }}-count" class="counter">0/{{ limits.schedule_activity }}</small>
+        </label>
+      </div>
+      {% endfor %}
+    </section>
+
+    <section class="card pink">
+      <div class="section-title"><span>04</span><h2>탐방 목표</h2></div>
+      <label>탐방 목표 <em>*</em>
+        <input name="goal" maxlength="{{ limits.goal }}" required data-count="goal-count">
+        <small id="goal-count" class="counter">0/{{ limits.goal }}</small>
+      </label>
+    </section>
+
+    <button id="submitBtn" class="submit" type="submit">PDF 탐방계획서 만들기</button>
+    <p id="status" class="status" aria-live="polite"></p>
+  </form>
+</main>
+
+<script>
+const form = document.getElementById('planForm');
+const button = document.getElementById('submitBtn');
+const status = document.getElementById('status');
+const notice = document.getElementById('mobileNotice');
+
+const ua = navigator.userAgent || '';
+const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isiOS = /iPad|iPhone|iPod/i.test(ua) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (isMobile && notice) notice.hidden = false;
+
+// Live character counters. There are no example values in the actual site.
+document.querySelectorAll('[data-count]').forEach(input => {
+  const counter = document.getElementById(input.dataset.count);
+  const update = () => { counter.textContent = `${input.value.length}/${input.maxLength}`; };
+  input.addEventListener('input', update);
+  update();
+});
+
+function buildFilename() {
+  const no = (form.querySelector('[name="group_no"]').value || '').trim();
+  const name = (form.querySelector('[name="group_name"]').value || '').trim()
+    .replace(/[\\/:*?"<>|]/g, '');
+  return `탐방계획서_${no}조_${name || '조'}.pdf`;
+}
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+
+  if (!form.reportValidity()) return;
+  if (!form.querySelector('input[name="concept"]:checked')) {
+    status.textContent = '탐방 컨셉을 1개 이상 선택해주세요.';
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'PDF 만드는 중...';
+  status.textContent = '';
+
+  try {
+    if (isiOS) {
+      // Native submission is more reliable for Safari's PDF save/share flow.
+      const oldTarget = form.target;
+      form.target = '_blank';
+      form.submit();
+      form.target = oldTarget;
+      status.textContent = 'PDF가 열리면 공유 버튼에서 파일에 저장할 수 있습니다.';
+      return;
+    }
+
+    const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || 'PDF 생성 중 오류가 발생했습니다.');
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = buildFilename();
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    status.textContent = `${buildFilename()} 파일이 저장되었습니다.`;
+  } catch (err) {
+    status.textContent = err.message;
+  } finally {
+    setTimeout(() => {
+      button.disabled = false;
+      button.textContent = 'PDF 탐방계획서 만들기';
+    }, isiOS ? 1500 : 0);
+  }
+});
+</script>
+</body>
+</html>
