@@ -23,7 +23,7 @@
     <section class="card blue">
       <div class="section-title"><span>01</span><h2>조 정보</h2></div>
       <div class="grid two">
-        <label>조 번호 <em>*</em><input name="group_no" type="number" min="1" max="5" required></label>
+        <label>조 번호 <em>*</em><input name="group_no" type="number" min="1" step="1" required></label>
         <label>조 이름 <em>*</em>
           <input name="group_name" maxlength="{{ limits.group_name }}" required data-count="group-name-count">
           <small id="group-name-count" class="counter">0/{{ limits.group_name }}</small>
