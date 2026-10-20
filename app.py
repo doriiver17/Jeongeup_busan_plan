@@ -162,9 +162,9 @@ def build_pdf(data, selected_concepts):
 
 
 def validate(data, selected_concepts):
-    no = clean(data.get("group_no"), 2)
-    if not no.isdigit() or not 1 <= int(no) <= 5:
-        return "조 번호는 1~5 사이의 숫자로 입력해주세요."
+    no = clean(data.get("group_no"))
+    if not no.isdigit() or int(no) < 1:
+        return "조 번호는 1 이상의 숫자로 입력해주세요."
 
     required = {
         "group_name": "조 이름",
@@ -213,7 +213,7 @@ def generate():
     if error:
         return jsonify({"error": error}), 400
 
-    no = clean(data.get("group_no"), 2)
+    no = clean(data.get("group_no"))
     group_name = clean(data.get("group_name"), LIMITS["group_name"])
     safe = re.sub(r'[\\/:*?"<>|]', "", group_name).strip() or "조"
 
