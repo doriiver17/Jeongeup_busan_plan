@@ -115,7 +115,7 @@ def build_pdf(data, selected_concepts):
     c.drawImage(ImageReader(str(TEMPLATE)), 0, 0, W, H, mask="auto")
 
     # Header group number
-    draw_center(c, data.get("group_no"), 282.0, 758.0, 55, 38, "KoreanBold", True, optical=0.0)
+    draw_center(c, data.get("group_no"), 282.0, 763.0, 55, 38, "KoreanBold", True, optical=0.0)
 
     # 01. Group information
     draw_center(c, data.get("group_name"), 146.3, 633.4, 112, 9.5, "KoreanBold")
